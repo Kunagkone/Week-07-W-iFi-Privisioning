@@ -190,9 +190,9 @@ void app_main(void)
 
 | รูปแบบการ Reset                  | คำสั่ง / พฤติกรรมที่ทำ               | พฤติกรรมของ LED แต่ละดวงหลังเปิดเครื่อง | สถานะใน Serial Monitor |
 | :------------------------------- | :----------------------------------- | :-------------------------------------- | :--------------------- |
-| **1. CLI Erase**                 | `idf.py erase-flash`                 |                                         |                        |
-| **2. Menuconfig Flag**           | `CONFIG_EXAMPLE_RESET_PROVISIONED=y` |                                         |                        |
-| **3. Hardware Button (GPIO 18)** | กดปุ่ม GPIO 18 ค้าง 3 วินาที         |                                         |                        |
+| **1. CLI Erase**                 | `idf.py erase-flash`                 |                  LED 1 (GPIO 2): สลับมาอยู่ในสถานะ Disconnected (ยังไม่เชื่อมต่อ Wi-Fi)LED 3 (GPIO 5): แสดงสถานะสว่าง/กระพริบ รอการทำ Provisioning                       |            ระบบตรวจไม่พบข้อมูลเดิมใน NVS (wifi_prov_mgr_is_provisioned() ได้ค่า false) แสดง Log "Starting provisioning" และสร้าง QR Code ขึ้นมาบนหน้าจอเพื่อรอการเชื่อมต่อ            |
+| **2. Menuconfig Flag**           | `CONFIG_EXAMPLE_RESET_PROVISIONED=y` |               LED 1 (GPIO 2): สลับมาอยู่ในสถานะ DisconnectedLED 3 (GPIO 5): สว่าง/กระพริบเข้าสู่โหมด Provisioning ทันทีทุกครั้งที่เปิดเครื่อง                          |            บอร์ดจะสั่งเรียกฟังก์ชัน wifi_prov_mgr_reset_provisioning() เพื่อล้าง Credentials ทิ้งทุกครั้งที่ Bootแสดง Log สั่ง Reset state และเข้าสู่ "Starting provisioning" พร้อมสร้าง QR Code ใหม่ทุกครั้ง            |
+| **3. Hardware Button (GPIO 18)** | กดปุ่ม GPIO 18 ค้าง 3 วินาที         |              ขณะกดค้าง: LED แสดงสถานะเดิมหลังกดครบ 3 วิ: ระบบลบ NVS เสร็จสิ้น LED 1 ตัดเข้าสถานะ Disconnected และ LED 3 สว่างขึ้นเข้าสู่โหมด Provisioning                           |             แสดง Log ตรวจจับการกดค้าง: Holding button... 1/3 seconds   >>> FACTORY RESET TRIGGERED! ERASING NVS FLASH <<<   จากนั้นระบบทำการล้าง NVS แล้วเริ่มต้นโหมด Provisioning ใหม่พร้อมแสดง QR Code            |
 
 ---
 
