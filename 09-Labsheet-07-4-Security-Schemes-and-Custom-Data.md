@@ -191,8 +191,8 @@ sequenceDiagram
 
 | สถานการณ์ทดสอบ | ค่า PoP ที่ป้อน | ผลลัพธ์บนแอปมือถือ | ข้อความ Log ใน Serial Monitor |
 | :--- | :--- | :--- | :--- |
-| **1. ป้อน PoP ผิดพลาด** | `wrong1234` | | |
-| **2. ป้อน PoP ถูกต้อง** | `abcd1234` | | |
+| **1. ป้อน PoP ผิดพลาด** | `wrong1234` | Session Setup Failed |E (15600) app: Received incorrect username and/or PoP for establishing secure session! |
+| **2. ป้อน PoP ถูกต้อง** | `abcd1234` | ยืนยันตัวตนสำเร็จ ผ่านเข้าสู่หน้าสแกน Wi-Fi และหน้าป้อน Custom Data ได้ | I (18200) app: Secured session established!|
 | **3. ส่ง Custom Data** | `TEST_DATA_999` | | |
 
 ---
@@ -200,16 +200,19 @@ sequenceDiagram
 ## 8. คำถามท้ายการทดลอง (Post-Lab Questions)
 1. การใช้ **Proof-of-Possession (PoP)** ช่วยป้องกันการโจมตีประเภทใดได้บ้าง?
    ```
+   ช่วยป้องกันการโจมตีประเภท Man-in-the-Middle (MitM), Un-authorized Provisioning และ Rogue Device Pairing โดยป้องกันไม่ให้ผู้โจมตีแอบแฝงตัวสแกนหาบลูทูธ/Wi-Fi ในบริเวณใกล้เคียง แล้วแอบส่งข้อมูล Wi-Fi ปลอมหรือดักจับเซสชัน เนื่องจากผู้ทำรายการจำเป็นต้องมี "หลักฐานการถือครองอุปกรณ์จริง" (PoP) เช่น รหัสที่ติดอยู่บนตัวเครื่อง สแกนจาก QR Code หรือพิมพ์อยู่บนกล่องผลิตภัณฑ์
    ```
-3. หากไม่มีการใช้ PoP (เช่น ใน Security 0) ผู้โจมตีที่อยู่ในรัศมีสัญญาณบลูทูธสามารถทำสิ่งใดกับอุปกรณ์ได้บ้าง?
-```\
-
-   ```
-5. ในการประยุกต์ใช้งานเชิงพาณิชย์จริง เราสามารถนำ **Custom Data Endpoint** ไปใช้ส่งข้อมูลประเภทใดได้อีกบ้าง (ยกตัวอย่าง 2 กรณี)?
+2. หากไม่มีการใช้ PoP (เช่น ใน Security 0) ผู้โจมตีที่อยู่ในรัศมีสัญญาณบลูทูธสามารถทำสิ่งใดกับอุปกรณ์ได้บ้าง?
 ```
+ผู้โจมตีสามารถเชื่อมต่อเข้าสู่ Protocomm Layer ของ ESP32 ได้ทันทีโดยไม่ต้องยึดถือสิทธิ์ ทำให้สามารถ:   แอบส่ง Credential (SSID และ Password) ปลอม เพื่อขัดขวางไม่ให้อุปกรณ์เชื่อมต่อเครือข่ายหลักได้ (Denial of Service)แอบเปลี่ยนการตั้งค่า Wi-Fi ให้อุปกรณ์ไปต่อกับ Rogue Access Point ของผู้โจมตี เพื่อดักจับข้อมูล (Traffic Sniffing)ส่งข้อมูล Malicious Payload ผ่าน Endpoint ต่างๆ เพื่อป่วนการทำงานของระบบ
+   ```
+3. ในการประยุกต์ใช้งานเชิงพาณิชย์จริง เราสามารถนำ **Custom Data Endpoint** ไปใช้ส่งข้อมูลประเภทใดได้อีกบ้าง (ยกตัวอย่าง 2 กรณี)?
+```
+User Account / Device Binding Token: ส่ง User ID, Activation Token หรือ Owner Email เพื่อทำการผูก (Bind) อุปกรณ์ IoT ชิ้นนั้นเข้ากับบัญชีของผู้ใช้บน Cloud System ทันทีหลัง Provisioning สำเร็จ   Cloud & MQTT Broker Configuration: ส่ง URL ของ MQTT Broker, Port, Client ID, หรือ Certificate/Private Key เฉพาะตัวของอุปกรณ์ เพื่อใช้อ้างอิงสำหรับการเชื่อมต่อกับระบบคลาวด์ เช่น AWS IoT, Azure IoT หรือ HiveMQ
    ```
 
-7. ในฟังก์ชัน `custom_prov_data_handler()` เหตุใดหน่วยความจำที่จัดสรรให้ `*outbuf` จึงถูก Free โดย Protocomm Layer อัตโนมัติหลังจากส่งข้อมูลเสร็จ?
+4. ในฟังก์ชัน `custom_prov_data_handler()` เหตุใดหน่วยความจำที่จัดสรรให้ `*outbuf` จึงถูก Free โดย Protocomm Layer อัตโนมัติหลังจากส่งข้อมูลเสร็จ?
 ```
+เนื่องจากเป็นข้อตกลงในการออกแบบเชิงสถาปัตยกรรม (API Design Pattern) ของ Protocomm Framework ที่กำหนดให้ผู้พัฒนาแอปพลิเคชัน (Application Level) ทำหน้าที่จัดสรรพื้นที่ (malloc/strdup) ให้แก่ข้อมูลขาออก จากนั้น Protocomm Layer จะรับช่วงต่อในการจัดคิว เข้ารหัสแพ็กเกจ และส่งข้อมูลทางฮาร์ดแวร์ เมื่อกระบวนการส่งเสร็จสมบูรณ์เรียบร้อยแล้ว Protocomm Layer จะเป็นผู้รับผิดชอบเรียกสั่ง free(*outbuf) คืนพื้นที่ให้ Heap Memory เอง เพื่ออำนวยความสะดวกให้ผู้พัฒนาไม่ต้องเขียนโค้ดจับเวลารอสั่ง Free เอง และป้องกันปัญหา Memory Leak ในระบบ
    ```
 
