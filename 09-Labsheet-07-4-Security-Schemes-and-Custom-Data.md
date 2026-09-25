@@ -150,7 +150,39 @@ wifi_prov_mgr_endpoint_register("custom-data", custom_prov_data_handler, NULL);
 4. ทำไมตัวแปร `*outbuf` จึงต้องจัดสรรใน Heap Memory (ทำไมจึงใช้ตัวแปร Local Static Array ธรรมดาไม่ได้)?
 
 ```text
-[พื้นที่สำหรับแนบรูปภาพ Diagram ที่นักศึกษาเขียนขึ้นด้วย Draw.io / Mermaid / วาดมือ]
+ภารกิจที่ 1: ผังขั้นตอนการตรวจสอบ PoP (Security Handshake Decision Flow)
+flowchart TD
+    Start["📱 แอปพลิเคชันส่ง Public Key + Verification Hash<br/>(รวมรหัส PoP ที่ผู้ใช้กรอก)"] --> Check_PoP{"Protocomm Security Layer<br/>ตรวจสอบ Hash กับ PoP ในระบบ<br/>('abcd1234')"}
+    
+    Check_PoP -- "PoP ไม่ถูกต้อง (Mismatch)" --> Event_Fail["Trigger Event:<br/>PROTOCOMM_SECURITY_SESSION_CREDENTIALS_MISMATCH"]
+    Event_Fail --> Log_Fail["พิมพ์ Log Error:<br/>'Received incorrect username and/or PoP...'"]
+    Log_Fail --> Reject["🔒 ปฏิเสธ Handshake / ไม่สร้าง Session Key<br/>(แอปขึ้น Session Setup Failed)"]
+    
+    Check_PoP -- "PoP ถูกต้อง (Match)" --> Event_Success["Trigger Event:<br/>PROTOCOMM_SECURITY_SESSION_SETUP_OK"]
+    Event_Success --> Log_Success["พิมพ์ Log Info:<br/>'Secured session established!'"]
+    Log_Success --> Key_Gen["🔑 สร้าง AES Session Key สำเร็จ<br/>(เปิดช่องทางสื่อสารเข้ารหัส)"]
+
+ภารกิจที่ 2: ผังการรับส่งข้อมูลผ่าน Custom Endpoint (Custom Data Handler Flow)
+sequenceDiagram
+    autonumber
+    participant App as 📱 Mobile App
+    participant Proto as ⚙️ Protocomm Layer
+    participant Handler as 📦 custom_prov_data_handler()
+    participant Heap as 🧠 System Heap Memory
+
+    App->>Proto: 1. ส่งข้อมูล payload มายัง endpoint "custom-data"<br/>(เช่น "STUDENT_ID:65010099")
+    Proto->>Handler: 2. เรียกฟังก์ชัน Callback ส่งผ่าน `inbuf` และ `inlen`
+    
+    Note over Handler: 3. พิมพ์ Log ด้วย ESP_LOGI():<br/>"Received custom data: STUDENT_ID:65010099"
+    
+    Handler->>Heap: 4. สั่ง `strdup("ACK_FROM_ESP32")`<br/>เพื่อจองพื้นที่ Heap แบบ Dynamic
+    Heap-->>Handler: คืน Pointer ที่ตั้งหน่วยความจำ
+    
+    Note over Handler: 5. กำหนดค่า `*outbuf` = pointer<br/>และ `*outlen` = strlen + 1
+    Handler-->>Proto: 6. Return ESP_OK
+    
+    Proto->>App: 7. นำข้อมูลใน `*outbuf` เข้ารหัสและส่งกลับไปยังมือถือ
+    Proto->>Heap: 8. เรียก `free(*outbuf)` คืนหน่วยความจำอัตโนมัติ
 ```
 
 ---
@@ -167,7 +199,17 @@ wifi_prov_mgr_endpoint_register("custom-data", custom_prov_data_handler, NULL);
 
 ## 8. คำถามท้ายการทดลอง (Post-Lab Questions)
 1. การใช้ **Proof-of-Possession (PoP)** ช่วยป้องกันการโจมตีประเภทใดได้บ้าง?
-2. หากไม่มีการใช้ PoP (เช่น ใน Security 0) ผู้โจมตีที่อยู่ในรัศมีสัญญาณบลูทูธสามารถทำสิ่งใดกับอุปกรณ์ได้บ้าง?
-3. ในการประยุกต์ใช้งานเชิงพาณิชย์จริง เราสามารถนำ **Custom Data Endpoint** ไปใช้ส่งข้อมูลประเภทใดได้อีกบ้าง (ยกตัวอย่าง 2 กรณี)?
-4. ในฟังก์ชัน `custom_prov_data_handler()` เหตุใดหน่วยความจำที่จัดสรรให้ `*outbuf` จึงถูก Free โดย Protocomm Layer อัตโนมัติหลังจากส่งข้อมูลเสร็จ?
+   ```
+   ```
+3. หากไม่มีการใช้ PoP (เช่น ใน Security 0) ผู้โจมตีที่อยู่ในรัศมีสัญญาณบลูทูธสามารถทำสิ่งใดกับอุปกรณ์ได้บ้าง?
+```\
+
+   ```
+5. ในการประยุกต์ใช้งานเชิงพาณิชย์จริง เราสามารถนำ **Custom Data Endpoint** ไปใช้ส่งข้อมูลประเภทใดได้อีกบ้าง (ยกตัวอย่าง 2 กรณี)?
+```
+   ```
+
+7. ในฟังก์ชัน `custom_prov_data_handler()` เหตุใดหน่วยความจำที่จัดสรรให้ `*outbuf` จึงถูก Free โดย Protocomm Layer อัตโนมัติหลังจากส่งข้อมูลเสร็จ?
+```
+   ```
 
